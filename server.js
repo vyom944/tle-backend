@@ -1,50 +1,29 @@
 const express = require("express");
-const fetch = require("node-fetch");
-const cors = require("cors");
+const fetch = require("node-fetch"); // Install with: npm install node-fetch
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5000;
 
-// Enable CORS for all routes
-app.use(cors());
-
-// Store data in memory
-let tleData = null;
-let lastUpdated = null;
-
-// Function to fetch TLE data from CelesTrak
-async function fetchTLEData() {
-  try {
-    console.log("Fetching updated TLE data from CelesTrak...");
-    const response = await fetch("https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle");
-    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-    tleData = await response.text();
-    lastUpdated = new Date();
-    console.log("TLE data updated at", lastUpdated.toLocaleTimeString());
-  } catch (error) {
-    console.error("Error fetching TLE data:", error);
-  }
-}
-
-// Initial fetch
-fetchTLEData();
-
-// Update every 10 minutes
-setInterval(fetchTLEData, 10 * 60 * 1000);
-
-// API endpoint
-app.get("/tle", (req, res) => {
-  if (tleData) {
-    res.send({
-      lastUpdated,
-      data: tleData
-    });
-  } else {
-    res.status(503).send({ error: "TLE data not available yet. Try again in a few seconds." });
-  }
+// Root route
+app.get("/", (req, res) => {
+    res.send("TLE Backend is running 🚀");
 });
 
-// Start server
+// TLE route
+app.get("/tle", async (req, res) => {
+    try {
+        const url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle";
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Error fetching TLE: ${response.statusText}`);
+
+        const tleData = await response.text(); // Celestrak sends plain text
+        res.type("text/plain").send(tleData);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
+
